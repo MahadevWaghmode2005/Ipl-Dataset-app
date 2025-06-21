@@ -17,7 +17,10 @@ st.markdown("Predict whether **team1** wins or not using logistic regression on 
 # Load dataset
 uploaded_file = st.file_uploader("Upload IPL Dataset CSV", type=["csv"])
 if uploaded_file is not None:
-    df = pd.read_csv(uploaded_file)
+    try:
+        df = pd.read_csv(uploaded_file, encoding='utf-8')
+    except UnicodeDecodeError:
+        df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
 
     st.subheader("📊 Raw Dataset Preview")
     st.dataframe(df.head())
