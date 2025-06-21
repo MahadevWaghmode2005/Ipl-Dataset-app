@@ -17,6 +17,7 @@ st.markdown("Predict whether **team1** wins or not using logistic regression on 
 # File Upload
 uploaded_file = st.file_uploader("Upload IPL Dataset CSV", type=["csv"])
 if uploaded_file is not None:
+    # Try reading file with UTF-8, fallback to ISO if needed
     try:
         df = pd.read_csv(uploaded_file, encoding='utf-8')
     except UnicodeDecodeError:
@@ -25,7 +26,7 @@ if uploaded_file is not None:
     st.subheader("📊 Raw Dataset Preview")
     st.dataframe(df.head())
 
-    # Data Preprocessing
+    # Data Cleaning & Target Creation
     df = df.dropna()
     df['target_win'] = np.where(df['winner'] == df['team1'], 1, 0)
 
@@ -52,13 +53,13 @@ if uploaded_file is not None:
     sns.barplot(x=top_players.values, y=top_players.index, ax=ax4)
     st.pyplot(fig4)
 
-    # Encode Categorical Columns
+    # Encode Categorical Variables
     categorical_cols = ['Season', 'city', 'team1', 'team2', 'toss_winner', 'toss_decision',
                         'result', 'venue', 'player_of_match', 'umpire1', 'umpire2']
     df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
     df.drop(columns=['id', 'date', 'winner', 'umpire3'], inplace=True, errors='ignore')
 
-    # Features and Target
+    # Feature/Target Split
     X = df.drop("target_win", axis=1)
     y = df["target_win"]
 
@@ -66,7 +67,7 @@ if uploaded_file is not None:
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    # Splitting
+    # Train/Test Split
     X_train, X_test, y_train, y_test = train_test_split(
         X_scaled, y, test_size=0.2, random_state=42)
 
@@ -74,10 +75,9 @@ if uploaded_file is not None:
     model = LogisticRegression()
     model.fit(X_train, y_train)
 
-    # Prediction
+    # Evaluation
     y_pred = model.predict(X_test)
 
-    # Evaluation
     st.subheader("📋 Model Evaluation")
     st.write("**Accuracy:**", accuracy_score(y_test, y_pred))
     st.text("Classification Report:\n" + classification_report(y_test, y_pred))
@@ -98,7 +98,7 @@ if uploaded_file is not None:
     sns.barplot(x='Importance', y='Feature', data=coef_df.head(10), ax=ax6)
     st.pyplot(fig6)
 
-    # Prediction Section
+    # Prediction Interface
     st.subheader("🎯 Make a Prediction")
     input_dict = {}
     for col in X.columns:
