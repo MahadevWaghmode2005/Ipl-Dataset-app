@@ -1,33 +1,31 @@
-import streamlit as st 
+import streamlit as st  
 import pandas as pd
 import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
-import chardet  # <--- NEW
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 
+# Page Configuration
 st.set_page_config(page_title="IPL Match Win Predictor", layout="wide")
 st.title("🏏 IPL Logistic Regression Classifier")
 st.markdown("Predict whether **team1** wins or not using logistic regression on past IPL data.")
 
+# File Upload
 uploaded_file = st.file_uploader("Upload IPL Dataset CSV", type=["csv"])
 if uploaded_file is not None:
-    # Detect encoding using chardet
-    rawdata = uploaded_file.read()
-    result = chardet.detect(rawdata)
-    encoding = result['encoding']
-    uploaded_file.seek(0)  # Reset file pointer after read()
-
-    # Read CSV with detected encoding
-    df = pd.read_csv(uploaded_file, encoding=encoding)
+    try:
+        df = pd.read_csv(uploaded_file, encoding='utf-8')
+    except UnicodeDecodeError:
+        df = pd.read_csv(uploaded_file, encoding='ISO-8859-1')
 
     st.subheader("📊 Raw Dataset Preview")
     st.dataframe(df.head())
 
+    # Data Preprocessing
     df = df.dropna()
     df['target_win'] = np.where(df['winner'] == df['team1'], 1, 0)
 
@@ -54,24 +52,32 @@ if uploaded_file is not None:
     sns.barplot(x=top_players.values, y=top_players.index, ax=ax4)
     st.pyplot(fig4)
 
+    # Encoding categorical columns
     categorical_cols = ['Season', 'city', 'team1', 'team2', 'toss_winner', 'toss_decision',
                         'result', 'venue', 'player_of_match', 'umpire1', 'umpire2']
     df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
     df.drop(columns=['id', 'date', 'winner', 'umpire3'], inplace=True, errors='ignore')
 
+    # Features and Target
     X = df.drop("target_win", axis=1)
     y = df["target_win"]
 
+    # Scaling
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
+    # Splitting
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_scaled, y, test_size=0.2, random_state=42)
 
+    # Model Training
     model = LogisticRegression()
     model.fit(X_train, y_train)
 
+    # Prediction
     y_pred = model.predict(X_test)
 
+    # Evaluation
     st.subheader("📋 Model Evaluation")
     st.write("**Accuracy:**", accuracy_score(y_test, y_pred))
     st.text("Classification Report:\n" + classification_report(y_test, y_pred))
@@ -82,6 +88,7 @@ if uploaded_file is not None:
     sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax5)
     st.pyplot(fig5)
 
+    # Feature Importance
     st.subheader("📌 Top 10 Important Features")
     feature_names = X.columns
     importance = model.coef_[0]
@@ -91,6 +98,7 @@ if uploaded_file is not None:
     sns.barplot(x='Importance', y='Feature', data=coef_df.head(10), ax=ax6)
     st.pyplot(fig6)
 
+    # Prediction Section
     st.subheader("🎯 Make a Prediction")
     input_dict = {}
     for col in X.columns:
